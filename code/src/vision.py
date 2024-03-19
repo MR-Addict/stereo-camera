@@ -1,4 +1,5 @@
 import cv2
+import math
 import torch
 from ultralytics import YOLO
 
@@ -78,18 +79,22 @@ def compare_similarity(left, right):
     area_similarity = 1 - (abs(left_area - right_area) / left_area)
 
     """
-    Method 3: compare the similarity by x and y coordinates
+    Method 3: compare the similarity by parallelism error
     """
 
-    # get the x and y similarity
-    x_similarity = 1 - abs(left_x1 - right_x2) / left_frame.shape[1]
-    y_similarity = 1 - abs(left_y1 - right_y1) / left_frame.shape[0]
+    # get the slopes
+    left_slope = (left_y2 - left_y1) / (left_x2 - left_x1)
+    right_slope = (right_y2 - right_y1) / (right_x2 - right_x1)
+
+    # get the angle between the lines
+    left_angle = math.atan(left_slope)
+    right_angle = math.atan(right_slope)
+
+    # get the similarity
+    parellelism_similarity = 1 - abs(left_angle - right_angle) / (math.pi / 2)
 
     similarity = (
-        hist_similarity * 0.2
-        + x_similarity * 0.25
-        + y_similarity * 0.25
-        + area_similarity * 0.3
+        hist_similarity * 0.2 + parellelism_similarity * 0.4 + area_similarity * 0.4
     )
 
     # return the similarity
