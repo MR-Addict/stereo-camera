@@ -6,7 +6,7 @@ from ultralytics import YOLO
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # load offical model
-model = YOLO("models/yolov8x.pt")
+model = YOLO("sample/models/yolov8n-custom-pingpong.pt")
 
 # move the model to the chosen device
 model.to(device)
@@ -14,7 +14,7 @@ model.to(device)
 
 def predict(frame, conf=0.6, verbose=False):
     # predict
-    result = model.predict(frame, conf=conf, verbose=verbose, classes=[39])[0]
+    result = model.predict(frame, conf=conf, verbose=verbose)[0]
 
     # prediction result
     objects = []
@@ -32,19 +32,15 @@ def predict(frame, conf=0.6, verbose=False):
     return objects
 
 
-def draw_object(frame, obj):
+def draw_object(frame, obj, depth):
     # draw the objects on the frame
+    color = (0, 0, 255)
     label, conf, (x1, y1, x2, y2) = obj
-    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.putText(
-        frame,
-        f"{label} {conf}",
-        (x1, y1 - 5),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
-        (0, 255, 0),
-        2,
-    )
+    text = f"{label} {conf} {depth:.2f}mm"
+
+    # draw the rectangle and text
+    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+    cv2.putText(frame, text, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     return frame
 
 
@@ -96,8 +92,6 @@ def compare_similarity(left, right):
         + area_similarity * 0.3
     )
 
-    print(similarity)
-
     # return the similarity
     return similarity
 
@@ -134,6 +128,18 @@ def match_objects(left, right, conf=0.6):
         # get the most similar object
         first_obj = objs_with_similarity[0]
         if first_obj[1] >= conf:
-            matched_objects.append((left_object, first_obj[0]))
+            # constant
+            focuse_length = 2.8  # mm
+            baseline = 100  # mm
+
+            # get center of the object
+            left_x = (left_object[2][0] + left_object[2][2]) / 2
+            right_x = (first_obj[0][2][0] + first_obj[0][2][2]) / 2
+
+            # eliminate depth
+            disparity = abs(left_x - right_x)
+            depth = (focuse_length * baseline) / disparity * 100
+
+            matched_objects.append((left_object, first_obj[0], depth))
 
     return matched_objects

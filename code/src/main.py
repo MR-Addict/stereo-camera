@@ -32,8 +32,9 @@ def main():
 
         # Draw the matched objects on the frames
         for obj in matched_objects:
-            left_frame = draw_object(left_frame, obj[0])
-            right_frame = draw_object(right_frame, obj[1])
+            depth = obj[2]
+            left_frame = draw_object(left_frame, obj[0], depth)
+            right_frame = draw_object(right_frame, obj[1], depth)
 
         # Combine frames horizontally
         combined_frame = cv2.hconcat([left_frame, right_frame])
